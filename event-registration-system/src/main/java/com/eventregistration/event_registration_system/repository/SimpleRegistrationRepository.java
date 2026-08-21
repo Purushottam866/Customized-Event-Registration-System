@@ -20,13 +20,11 @@ public interface SimpleRegistrationRepository extends JpaRepository<SimpleRegist
     List<SimpleRegistration> findByFormOrderByCreatedAtDesc(SimpleForm form);
     
     @Query(value = "SELECT * FROM simple_registrations sr WHERE sr.form_id = :formId AND " +
-           "(JSON_UNQUOTE(JSON_EXTRACT(sr.form_data, '$.name')) LIKE CONCAT('%', :searchTerm, '%') OR " +
-           "JSON_UNQUOTE(JSON_EXTRACT(sr.form_data, '$.email')) LIKE CONCAT('%', :searchTerm, '%') OR " +
-           "JSON_UNQUOTE(JSON_EXTRACT(sr.form_data, '$.mobile')) LIKE CONCAT('%', :searchTerm, '%') OR " +
-           "JSON_UNQUOTE(JSON_EXTRACT(sr.form_data, '$.company')) LIKE CONCAT('%', :searchTerm, '%'))",
-           nativeQuery = true)
-    List<SimpleRegistration> searchRegistrations(@Param("formId") Long formId, 
-                                                  @Param("searchTerm") String searchTerm);
-
-	long countByFormId(Long formId);
+    	       "JSON_SEARCH(LOWER(sr.form_data), 'all', LOWER(CONCAT('%', :searchTerm, '%'))) IS NOT NULL",
+    	       nativeQuery = true)
+    	List<SimpleRegistration> searchRegistrations(@Param("formId") Long formId, 
+    	                                              @Param("searchTerm") String searchTerm);
+    
+    @Query("SELECT COUNT(sr) FROM SimpleRegistration sr WHERE sr.form.id = :formId")
+    long countByFormId(@Param("formId") Long formId);
 }
