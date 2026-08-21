@@ -25,6 +25,7 @@ public class SimpleRegistrationService {
     private final SimpleFormService formService;
     private final QRCodeGenerator qrCodeGenerator;
     private final JsonConverter jsonConverter;
+    private final AsyncEmailService asyncEmailService;  // Changed from EmailService to AsyncEmailService
 
     @Transactional
     public SimpleRegistration registerUser(Long formId, Map<String, Object> formData) {
@@ -35,17 +36,17 @@ public class SimpleRegistrationService {
         validateFormData(formId, formData);
         
         // Check for duplicate registration (based on email or mobile)
-        String email = (String) formData.get("email");
-        String mobile = (String) formData.get("mobile");
+        String email = (String) formData.get("email address");
+        String mobile = (String) formData.get("phone number");
         
         if (email != null || mobile != null) {
             List<SimpleRegistration> existingRegistrations = registrationRepository.findByForm(form);
             for (SimpleRegistration existing : existingRegistrations) {
                 Map<String, Object> existingData = jsonConverter.fromJsonToMap(existing.getFormData());
-                if (email != null && email.equals(existingData.get("email"))) {
+                if (email != null && email.equals(existingData.get("email address"))) {
                     throw new DuplicateRegistrationException("Email already registered: " + email);
                 }
-                if (mobile != null && mobile.equals(existingData.get("mobile"))) {
+                if (mobile != null && mobile.equals(existingData.get("phone number"))) {
                     throw new DuplicateRegistrationException("Mobile number already registered: " + mobile);
                 }
             }
@@ -71,9 +72,21 @@ public class SimpleRegistrationService {
         registration.setForm(form);
         registration.setFormData(formDataJson);
         registration.setQrCode(qrCodeBase64);
+        registration.setEmailSent(false);
+        registration.setEmailRetryCount(0);
         
         log.info("New simple registration created: {}", registrationId);
-        return registrationRepository.save(registration);
+        SimpleRegistration savedRegistration = registrationRepository.save(registration);
+        
+        // ===== SEND EMAIL ASYNCHRONOUSLY =====
+        try {
+            asyncEmailService.sendEmailAsync(registrationId);
+            log.info("Email queued for registration: {}", registrationId);
+        } catch (Exception e) {
+            log.error("Error queuing email for {}: {}", registrationId, e.getMessage());
+        }
+        
+        return savedRegistration;
     }
 
     public SimpleRegistration getRegistrationById(String registrationId) {
@@ -139,12 +152,13 @@ public class SimpleRegistrationService {
     private void validateFieldType(String fieldName, String value, String fieldType) {
         switch (fieldType.toUpperCase()) {
             case "EMAIL":
-                if (!value.matches("^[A-Za-z0-9+_.-]+@(.+)$")) {
+                // Allow alphanumeric + special chars in local part and domain
+                // Domain can contain letters, numbers, dots, and hyphens
+                if (!value.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
                     throw new BadRequestException("Invalid email format for field: " + fieldName);
                 }
                 break;
             case "PHONE":
-                // Remove all non-digit characters (spaces, line breaks, special chars)
                 String cleanedPhone = value.replaceAll("[^0-9]", "").trim();
                 if (!cleanedPhone.matches("^[0-9]{10,15}$")) {
                     throw new BadRequestException("Invalid phone number format for field: " + fieldName + ". Expected 10-15 digits.");

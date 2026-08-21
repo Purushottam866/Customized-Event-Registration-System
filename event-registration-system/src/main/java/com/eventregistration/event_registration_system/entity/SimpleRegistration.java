@@ -33,6 +33,15 @@ public class SimpleRegistration {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+    
+    @Column(name = "email_sent")
+    private Boolean emailSent = false;
+
+    @Column(name = "email_sent_at")
+    private LocalDateTime emailSentAt;
+
+    @Column(name = "email_retry_count")
+    private Integer emailRetryCount = 0;
 
     @PrePersist
     protected void onCreate() {

@@ -1,6 +1,6 @@
 package com.eventregistration.event_registration_system.util;
 
-import com.eventregistration.event_registration_system.entity.Registration;
+import com.eventregistration.event_registration_system.entity.SimpleRegistration;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -19,188 +19,174 @@ public class BadgeHTMLGenerator {
     /**
      * Generate HTML for single badge - Clean version with font size control
      */
-    public String generateBadgeHTML(Registration registration, 
-                                    List<String> selectedFields,
-                                    String eventName) {
-        Map<String, Object> formData = jsonConverter.fromJsonToMap(registration.getFormData());
-        String qrCodeBase64 = registration.getQrCode();
-
+    public String generateSimpleBadgeHTML(SimpleRegistration registration, 
+                                          List<String> selectedFields,
+                                          String eventName,
+                                          String qrCodeBase64,
+                                          Map<String, Object> formData) {
         StringBuilder html = new StringBuilder();
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang=\"en\">");
-        html.append("<head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        html.append("<title>Badge - ").append(registration.getRegistrationId()).append("</title>");
-        html.append("<style>");
+        html.append("<!DOCTYPE html>\n");
+        html.append("<html lang=\"en\">\n");
+        html.append("<head>\n");
+        html.append("    <meta charset=\"UTF-8\">\n");
+        html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.append("    <title>Badge - ").append(registration.getRegistrationId()).append("</title>\n");
+        html.append("    <style>\n");
         html.append(getBadgeCSS());
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
+        html.append("    </style>\n");
+        html.append("</head>\n");
+        html.append("<body>\n");
         
-        // Font size controls
-        html.append("<div class=\"font-controls\">");
-        html.append("<label>Font Size:</label>");
-        html.append("<button onclick=\"changeFontSize(-1)\">A-</button>");
-        html.append("<span id=\"fontSizeDisplay\">16</span>px");
-        html.append("<button onclick=\"changeFontSize(1)\">A+</button>");
-        html.append("<span style=\"margin-left:20px;font-size:12px;color:#999;\">");
-        html.append("(Changes apply to badge only, not saved)");
-        html.append("</span>");
-        html.append("</div>");
+        // Font controls
+        html.append("    <div class=\"font-controls\">\n");
+        html.append("        <label>Font Size:</label>\n");
+        html.append("        <button onclick=\"changeFontSize(-1)\">A-</button>\n");
+        html.append("        <span id=\"fontSizeDisplay\">16</span>px\n");
+        html.append("        <button onclick=\"changeFontSize(1)\">A+</button>\n");
+        html.append("        <span style=\"margin-left:20px;font-size:12px;color:#999;\">(Changes apply to badge only, not saved)</span>\n");
+        html.append("    </div>\n");
         
-        html.append("<div class=\"badge-container\" id=\"badgeContainer\">");
-        html.append("<div class=\"badge\">");
+        html.append("    <div class=\"badge-container\" id=\"badgeContainer\">\n");
+        html.append("        <div class=\"badge\">\n");
         
         // QR Code
         if (qrCodeBase64 != null && !qrCodeBase64.isEmpty()) {
-            html.append("<div class=\"qr-section\">");
-            html.append("<img id=\"qrImage\" src=\"data:image/png;base64,");
-            html.append(qrCodeBase64);
-            html.append("\" alt=\"QR Code\"/>");
-            html.append("</div>");
+            html.append("            <div class=\"qr-section\">\n");
+            html.append("                <img id=\"qrImage\" src=\"data:image/png;base64,").append(qrCodeBase64).append("\" alt=\"QR Code\"/>\n");
+            html.append("            </div>\n");
         }
         
         // Selected Fields
-        html.append("<div class=\"fields-section\">");
+        html.append("            <div class=\"fields-section\">\n");
         for (String field : selectedFields) {
             Object value = formData.get(field.toLowerCase());
             if (value != null && !value.toString().isEmpty()) {
-                html.append("<div class=\"field-value\">");
-                html.append(value.toString().toUpperCase());
-                html.append("</div>");
+                html.append("                <div class=\"field-value\">").append(value.toString().toUpperCase()).append("</div>\n");
             }
         }
-        html.append("</div>");
+        html.append("            </div>\n");
         
-        html.append("</div>");
-        html.append("</div>");
+        html.append("        </div>\n");
+        html.append("    </div>\n");
         
-        html.append("<div class=\"print-controls\">");
-        html.append("<button onclick=\"window.print()\">🖨️ Print Badge</button>");
-        html.append("</div>");
+        html.append("    <div class=\"print-controls\">\n");
+        html.append("        <button onclick=\"window.print()\">🖨️ Print Badge</button>\n");
+        html.append("    </div>\n");
         
         // JavaScript
-        html.append("<script>");
-        html.append("let currentFontSize = 16;");
-        html.append("const minSize = 10;");
-        html.append("const maxSize = 40;");
-        html.append("");
-        html.append("function changeFontSize(delta) {");
-        html.append("    currentFontSize = Math.min(maxSize, Math.max(minSize, currentFontSize + delta));");
-        html.append("    document.getElementById('fontSizeDisplay').textContent = currentFontSize;");
-        html.append("    const fields = document.querySelectorAll('.field-value');");
-        html.append("    fields.forEach(field => {");
-        html.append("        field.style.fontSize = currentFontSize + 'px';");
-        html.append("    });");
-        html.append("    const qrSize = Math.min(200, Math.max(100, currentFontSize * 6));");
-        html.append("    const qrImage = document.getElementById('qrImage');");
-        html.append("    if (qrImage) {");
-        html.append("        qrImage.style.width = qrSize + 'px';");
-        html.append("        qrImage.style.height = qrSize + 'px';");
-        html.append("    }");
-        html.append("}");
-        html.append("</script>");
+        html.append("    <script>\n");
+        html.append("        let currentFontSize = 16;\n");
+        html.append("        const minSize = 10;\n");
+        html.append("        const maxSize = 40;\n\n");
+        html.append("        function changeFontSize(delta) {\n");
+        html.append("            currentFontSize = Math.min(maxSize, Math.max(minSize, currentFontSize + delta));\n");
+        html.append("            document.getElementById('fontSizeDisplay').textContent = currentFontSize;\n");
+        html.append("            const fields = document.querySelectorAll('.field-value');\n");
+        html.append("            fields.forEach(field => {\n");
+        html.append("                field.style.fontSize = currentFontSize + 'px';\n");
+        html.append("            });\n");
+        html.append("            const qrSize = Math.min(200, Math.max(100, currentFontSize * 6));\n");
+        html.append("            const qrImage = document.getElementById('qrImage');\n");
+        html.append("            if (qrImage) {\n");
+        html.append("                qrImage.style.width = qrSize + 'px';\n");
+        html.append("                qrImage.style.height = qrSize + 'px';\n");
+        html.append("            }\n");
+        html.append("        }\n");
+        html.append("    </script>\n");
         
-        html.append("</body>");
+        html.append("</body>\n");
         html.append("</html>");
         
         return html.toString();
     }
 
     /**
-     * Generate HTML for bulk badges - Fixed QR code truncation issue
+     * Generate HTML for bulk badges
      */
-    public String generateBulkBadgeHTML(List<Registration> registrations,
-                                        List<String> selectedFields,
-                                        String eventName) {
-        // Use larger initial capacity to avoid truncation
+    public String generateSimpleBulkBadgeHTML(List<SimpleRegistration> registrations,
+                                              List<String> selectedFields,
+                                              String eventName) {
         StringBuilder html = new StringBuilder(1024 * 1024 * 5);
         
-        html.append("<!DOCTYPE html>");
-        html.append("<html lang=\"en\">");
-        html.append("<head>");
-        html.append("<meta charset=\"UTF-8\">");
-        html.append("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">");
-        html.append("<title>Bulk Badges</title>");
-        html.append("<style>");
+        html.append("<!DOCTYPE html>\n");
+        html.append("<html lang=\"en\">\n");
+        html.append("<head>\n");
+        html.append("    <meta charset=\"UTF-8\">\n");
+        html.append("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.append("    <title>Bulk Badges</title>\n");
+        html.append("    <style>\n");
         html.append(getBulkBadgeCSS());
-        html.append("</style>");
-        html.append("</head>");
-        html.append("<body>");
+        html.append("    </style>\n");
+        html.append("</head>\n");
+        html.append("<body>\n");
         
         // Font size controls
-        html.append("<div class=\"font-controls\">");
-        html.append("<label>Font Size:</label>");
-        html.append("<button onclick=\"changeFontSize(-1)\">A-</button>");
-        html.append("<span id=\"fontSizeDisplay\">13</span>px");
-        html.append("<button onclick=\"changeFontSize(1)\">A+</button>");
-        html.append("<span style=\"margin-left:20px;font-size:12px;color:#999;\">");
-        html.append("(Changes apply to all badges, not saved)");
-        html.append("</span>");
-        html.append("</div>");
+        html.append("    <div class=\"font-controls\">\n");
+        html.append("        <label>Font Size:</label>\n");
+        html.append("        <button onclick=\"changeFontSize(-1)\">A-</button>\n");
+        html.append("        <span id=\"fontSizeDisplay\">13</span>px\n");
+        html.append("        <button onclick=\"changeFontSize(1)\">A+</button>\n");
+        html.append("        <span style=\"margin-left:20px;font-size:12px;color:#999;\">(Changes apply to all badges, not saved)</span>\n");
+        html.append("    </div>\n");
         
-        html.append("<div class=\"bulk-container\" id=\"badgeContainer\">");
+        html.append("    <div class=\"bulk-container\" id=\"badgeContainer\">\n");
         
-        for (Registration registration : registrations) {
+        for (SimpleRegistration registration : registrations) {
             Map<String, Object> formData = jsonConverter.fromJsonToMap(registration.getFormData());
             String qrCodeBase64 = registration.getQrCode();
             
-            html.append("<div class=\"badge\">");
+            html.append("        <div class=\"badge\">\n");
             
-            // QR Code - Append separately to avoid truncation
+            // QR Code
             if (qrCodeBase64 != null && !qrCodeBase64.isEmpty()) {
-                html.append("<div class=\"qr-section\">");
-                html.append("<img class=\"qr-image\" src=\"data:image/png;base64,");
+                html.append("            <div class=\"qr-section\">\n");
+                html.append("                <img class=\"qr-image\" src=\"data:image/png;base64,");
                 html.append(qrCodeBase64);
-                html.append("\" alt=\"QR Code\"/>");
-                html.append("</div>");
+                html.append("\" alt=\"QR Code\"/>\n");
+                html.append("            </div>\n");
             }
             
             // Selected Fields
-            html.append("<div class=\"fields-section\">");
+            html.append("            <div class=\"fields-section\">\n");
             for (String field : selectedFields) {
                 Object value = formData.get(field.toLowerCase());
                 if (value != null && !value.toString().isEmpty()) {
-                    html.append("<div class=\"field-value\">");
-                    html.append(value.toString().toUpperCase());
-                    html.append("</div>");
+                    html.append("                <div class=\"field-value\">").append(value.toString().toUpperCase()).append("</div>\n");
                 }
             }
-            html.append("</div>");
+            html.append("            </div>\n");
             
-            html.append("</div>");
+            html.append("        </div>\n");
         }
         
-        html.append("</div>");
+        html.append("    </div>\n");
         
-        html.append("<div class=\"print-controls\">");
-        html.append("<button onclick=\"window.print()\">🖨️ Print All Badges</button>");
-        html.append("</div>");
+        html.append("    <div class=\"print-controls\">\n");
+        html.append("        <button onclick=\"window.print()\">🖨️ Print All Badges</button>\n");
+        html.append("    </div>\n");
         
         // JavaScript
-        html.append("<script>");
-        html.append("let currentFontSize = 13;");
-        html.append("const minSize = 8;");
-        html.append("const maxSize = 30;");
-        html.append("");
-        html.append("function changeFontSize(delta) {");
-        html.append("    currentFontSize = Math.min(maxSize, Math.max(minSize, currentFontSize + delta));");
-        html.append("    document.getElementById('fontSizeDisplay').textContent = currentFontSize;");
-        html.append("    const fields = document.querySelectorAll('.field-value');");
-        html.append("    fields.forEach(field => {");
-        html.append("        field.style.fontSize = currentFontSize + 'px';");
-        html.append("    });");
-        html.append("    const qrSize = Math.min(140, Math.max(70, currentFontSize * 5));");
-        html.append("    const qrImages = document.querySelectorAll('.qr-image');");
-        html.append("    qrImages.forEach(img => {");
-        html.append("        img.style.width = qrSize + 'px';");
-        html.append("        img.style.height = qrSize + 'px';");
-        html.append("    });");
-        html.append("}");
-        html.append("</script>");
+        html.append("    <script>\n");
+        html.append("        let currentFontSize = 13;\n");
+        html.append("        const minSize = 8;\n");
+        html.append("        const maxSize = 30;\n\n");
+        html.append("        function changeFontSize(delta) {\n");
+        html.append("            currentFontSize = Math.min(maxSize, Math.max(minSize, currentFontSize + delta));\n");
+        html.append("            document.getElementById('fontSizeDisplay').textContent = currentFontSize;\n");
+        html.append("            const fields = document.querySelectorAll('.field-value');\n");
+        html.append("            fields.forEach(field => {\n");
+        html.append("                field.style.fontSize = currentFontSize + 'px';\n");
+        html.append("            });\n");
+        html.append("            const qrSize = Math.min(140, Math.max(70, currentFontSize * 5));\n");
+        html.append("            const qrImages = document.querySelectorAll('.qr-image');\n");
+        html.append("            qrImages.forEach(img => {\n");
+        html.append("                img.style.width = qrSize + 'px';\n");
+        html.append("                img.style.height = qrSize + 'px';\n");
+        html.append("            });\n");
+        html.append("        }\n");
+        html.append("    </script>\n");
         
-        html.append("</body>");
+        html.append("</body>\n");
         html.append("</html>");
         
         return html.toString();

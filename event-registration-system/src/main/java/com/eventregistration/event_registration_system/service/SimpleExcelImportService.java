@@ -21,11 +21,13 @@ public class SimpleExcelImportService {
 
     private final SimpleFormService formService;
     private final SimpleRegistrationService registrationService;
+    private final AsyncEmailService asyncEmailService;  // Changed from EmailService to AsyncEmailService
 
     public Map<String, Object> importRegistrations(Long formId, MultipartFile file) {
         Map<String, Object> result = new HashMap<>();
         List<Map<String, Object>> successful = new ArrayList<>();
         List<Map<String, Object>> failed = new ArrayList<>();
+        List<String> registrationIds = new ArrayList<>();
         
         // Get form fields to know the column headers
         List<Map<String, Object>> formFields = formService.getFormFields(formId);
@@ -76,13 +78,14 @@ public class SimpleExcelImportService {
                         }
                     }
                     
-                    // Register user - This will be handled individually
+                    // Register user
                     SimpleRegistration registration = registrationService.registerUser(formId, formData);
                     
                     Map<String, Object> successData = new HashMap<>();
                     successData.put("registrationId", registration.getRegistrationId());
                     successData.put("data", formData);
                     successful.add(successData);
+                    registrationIds.add(registration.getRegistrationId());
                     
                 } catch (DuplicateRegistrationException e) {
                     Map<String, Object> failedData = new HashMap<>();
@@ -105,7 +108,27 @@ public class SimpleExcelImportService {
             result.put("successList", successful);
             result.put("failedList", failed);
             
-            log.info("Excel import completed: {} successful, {} failed", successful.size(), failed.size());
+            // ===== SEND EMAILS ASYNCHRONOUSLY =====
+            int emailSentCount = 0;
+            int emailFailedCount = 0;
+
+            for (String registrationId : registrationIds) {
+                try {
+                    asyncEmailService.sendEmailAsync(registrationId);
+                    emailSentCount++;
+                    log.info("Email queued for registration: {}", registrationId);
+                } catch (Exception e) {
+                    emailFailedCount++;
+                    log.error("Failed to queue email for registration {}: {}", registrationId, e.getMessage());
+                }
+            }
+
+            result.put("emailSent", emailSentCount);
+            result.put("emailFailed", emailFailedCount);
+            result.put("emailMode", "Async (Emails sent in background)");
+            
+            log.info("Excel import completed: {} successful, {} failed. Emails queued: {}",
+                     successful.size(), failed.size(), emailSentCount);
             
         } catch (Exception e) {
             log.error("Error importing Excel: {}", e.getMessage());

@@ -2,8 +2,8 @@ package com.eventregistration.event_registration_system.controller;
 
 import com.eventregistration.event_registration_system.dto.request.OnSpotRegistrationRequest;
 import com.eventregistration.event_registration_system.dto.response.ApiResponse;
-import com.eventregistration.event_registration_system.dto.response.SimpleRegistrationResponse;
 import com.eventregistration.event_registration_system.entity.SimpleRegistration;
+import com.eventregistration.event_registration_system.service.AsyncEmailService;
 import com.eventregistration.event_registration_system.service.SimpleBadgeService;
 import com.eventregistration.event_registration_system.service.SimpleRegistrationService;
 import com.eventregistration.event_registration_system.util.JsonConverter;
@@ -26,11 +26,9 @@ public class SimpleOnSpotController {
 
     private final SimpleRegistrationService registrationService;
     private final SimpleBadgeService badgeService;
+    private final AsyncEmailService asyncEmailService;  // Changed from EmailService to AsyncEmailService
     private final JsonConverter jsonConverter;
 
-    /**
-     * On-Spot Registration - Register user and get badge HTML immediately
-     */
     @PostMapping(value = "/register/{formId}", produces = MediaType.TEXT_HTML_VALUE)
     public ResponseEntity<String> onSpotRegisterAndPrint(
             @PathVariable Long formId,
@@ -44,6 +42,15 @@ public class SimpleOnSpotController {
         SimpleRegistration registration = registrationService.registerUser(formId, request.getFormData());
         log.info("User registered on-spot: {}", registration.getRegistrationId());
         
+        // ===== SEND EMAIL ASYNCHRONOUSLY =====
+        try {
+            asyncEmailService.sendEmailAsync(registration.getRegistrationId());
+            log.info("Email queued for on-spot registration: {}", registration.getRegistrationId());
+        } catch (Exception e) {
+            log.error("Error queuing email for on-spot registration {}: {}", 
+                     registration.getRegistrationId(), e.getMessage());
+        }
+        
         // 2. Generate badge HTML with selected fields
         String html = badgeService.generateBadgeHTML(registration, request.getBadgeFields());
         
@@ -53,9 +60,6 @@ public class SimpleOnSpotController {
                 .body(html);
     }
 
-    /**
-     * On-Spot Registration with redirect to badge
-     */
     @PostMapping("/register-json/{formId}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> onSpotRegisterJson(
             @PathVariable Long formId,
@@ -68,6 +72,15 @@ public class SimpleOnSpotController {
         // 1. Register the user
         SimpleRegistration registration = registrationService.registerUser(formId, request.getFormData());
         log.info("User registered on-spot: {}", registration.getRegistrationId());
+        
+        // ===== SEND EMAIL ASYNCHRONOUSLY =====
+        try {
+            asyncEmailService.sendEmailAsync(registration.getRegistrationId());
+            log.info("Email queued for on-spot registration: {}", registration.getRegistrationId());
+        } catch (Exception e) {
+            log.error("Error queuing email for on-spot registration {}: {}", 
+                     registration.getRegistrationId(), e.getMessage());
+        }
         
         // 2. Generate badge HTML
         String html = badgeService.generateBadgeHTML(registration, request.getBadgeFields());
